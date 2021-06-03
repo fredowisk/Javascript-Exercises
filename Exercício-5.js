@@ -4,11 +4,7 @@ function DatabaseError(statement = "", message) {
 }
 
 const database = {
-  tables: {
-    name: "",
-    columns: {},
-    data: [],
-  },
+  tables: {},
   createTable: function (statement) {
     const tableName = statement.match(/table (\w+)/)[1];
 
@@ -29,8 +25,6 @@ const database = {
       columns: parsedColumns,
       data: [],
     };
-
-    return console.log(JSON.stringify(this.tables, undefined, "  "));
   },
   insert: function (statement) {
     let [_,tableName, columns, values] = statement.match(
@@ -55,8 +49,6 @@ const database = {
     } else {
       throw new DatabaseError(statement, `Table ${tableName} does not exist`);
     }
-
-    return console.log(JSON.stringify(this.tables, undefined, "  "));
   },
   execute: function (statement) {
     if (statement.startsWith("create table")) {
@@ -83,6 +75,7 @@ try {
   database.execute(
     "insert into author (id, name, age) values (3, Martin Fowler, 54)"
   );
+  console.log(JSON.stringify(database, undefined, "  "));
 } catch ({ message }) {
   console.log(message);
 }
