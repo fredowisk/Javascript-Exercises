@@ -5,8 +5,6 @@ function DatabaseError(statement = "", message) {
 
 const database = {
   tables: {
-    name: "",
-    columns: {},
     data: [],
   },
   createTable: function (statement) {
@@ -24,8 +22,7 @@ const database = {
       });
     }
 
-    this.tables = {
-      name: tableName,
+    this.tables[tableName] = {
       columns: parsedColumns,
       data: [],
     };
@@ -46,36 +43,43 @@ const database = {
       });
     }
 
-    let { name, data } = this.tables;
-
-    if (name === tableName) {
-      data.push(row);
+    if (this.tables[tableName]) {
+      this.tables[tableName].data.push(row);
     } else {
       throw new DatabaseError(statement, `Table ${tableName} does not exist`);
     }
   },
   select: function (statement) {
     let [_, columns, tableName, columnWhere, columnValue] = statement.match(
-      /select (.+) from (\w+) where (\w+) = (\w+)/
+      /select (.+) from (\w+)(?: where (\w+) = (.+))?/
     );
 
-    columns = columns.split(", ");
+    const table = this.tables[tableName];
 
-    const result = this.tables.data.find(
-      (item) => item[columnWhere] === columnValue
-    );
+    if (table) {
+      columns = columns.split(", ");
 
-    let { name, data } = this.tables;
+      let result = table.data;
 
-    if (name === tableName) {
-      let newResult = [];
-      Object.keys(result).map((item) =>
-        columns.includes(item)
-          ? (newResult = {...newResult, [item]: result[item]})
-          : ""
-      );
+      if (columnWhere) {
+        result = result.filter((item) => item[columnWhere] === columnValue);
 
-      data.push(newResult);
+        if (!result)
+          throw new DatabaseError(
+            statement,
+            `O valor ${columnWhere} = ${columnValue} não existe`
+          );
+      }
+
+      result = result.map(row => {
+        let newResult = {};
+        columns.forEach(column => {
+          newResult[column] = row[column];
+        })
+        return newResult;
+      });
+
+      table.data.push(result);
     } else {
       throw new DatabaseError(statement, `Table ${tableName} does not exist`);
     }
@@ -109,6 +113,6 @@ try {
 
   database.execute("select name, age from author where id = 1");
   console.log(JSON.stringify(database, undefined, "  "));
-} catch ({ message }) {
-  console.log(message);
+} catch (e) {
+  console.log("Ocorreu um erro, verifique se o comando informado está correto");
 }
