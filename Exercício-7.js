@@ -7,7 +7,7 @@ const database = {
   tables: {
     data: [],
   },
-  createTable: function (statement) {
+  create: function (statement) {
     const tableName = statement.match(/table (\w+)/)[1];
 
     const columns = statement.match(/\((.+)\)/)[1].split(", ");
@@ -56,64 +56,49 @@ const database = {
 
     const table = this.tables[tableName];
 
-    if (table) {
-      columns = columns.split(", ");
+    columns = columns.split(", ");
 
-      let result = table.data;
+    let result = table.data;
 
-      if (columnWhere) {
-        result = result.filter((item) => item[columnWhere] === columnValue);
-
-      // result = result.reduce((accumulator, currentValue) => {
-      //   let newResult = {};
-      //   if (columnWhere) {
-      //     if (currentValue[columnWhere] === columnValue) {
-      //       columns.forEach((column) => {
-      //         newResult[column] = currentValue[column];
-      //       });
-      //       accumulator.push(newResult);
-      //       return accumulator;
-      //     } else {
-      //       return accumulator;
-      //     }
-      //   } else {
-      //     columns.forEach((column) => {
-      //       newResult[column] = currentValue[column];
-      //     });
-
-      //     accumulator.push(newResult);
-      //     return accumulator;
-      //   }
-      // }, []);
-
+    if (columnWhere) {
+      result = result.filter((item) => item[columnWhere] === columnValue);
 
       if (!result)
         throw new DatabaseError(
           statement,
           `O valor ${columnWhere} = ${columnValue} não existe`
         );
-      }
+    }
 
-      result = result.map((row) => {
-        let newResult = {};
-        columns.forEach((column) => {
-          newResult[column] = row[column];
-        });
-        return newResult;
+    result = result.map((row) => {
+      let newResult = {};
+      columns.forEach((column) => {
+        newResult[column] = row[column];
       });
+      return newResult;
+    });
 
-      table.data.push(result);
+    table.data.push(result);
+  },
+  delete: function (statement) {
+    let [_, tableName, columnWhere, columnValue] = statement.match(
+      /delete from (\w+)(?: where (\w+) = (.+))?/
+    );
+
+    const table = this.tables[tableName];
+
+    if (columnWhere) {
+      table.data = table.data.filter(
+        (item) => item[columnWhere] !== columnValue
+      );
     } else {
-      throw new DatabaseError(statement, `Table ${tableName} does not exist`);
+      table.data = [];
     }
   },
   execute: function (statement) {
-    if (statement.startsWith("create table")) {
-      return this.createTable(statement);
-    } else if (statement.startsWith("insert into")) {
-      return this.insert(statement);
-    } else if (statement.startsWith("select")) {
-      return this.select(statement);
+    const [_, operation] = statement.match(/(\w+) /);
+    if (operation) {
+      return this[operation](statement);
     } else {
       throw new DatabaseError(statement, `Syntax error: '${statement}'`);
     }
@@ -134,7 +119,9 @@ try {
     "insert into author (id, name, age) values (3, Martin Fowler, 54)"
   );
 
-  database.execute("select name, age from author where id = 1");
+  database.execute("delete from author where id = 2");
+
+  database.execute("select name, age from author");
   console.log(JSON.stringify(database, undefined, "  "));
 } catch (e) {
   console.log("Ocorreu um erro, verifique se o comando informado está correto");
