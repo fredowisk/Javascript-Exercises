@@ -3,7 +3,7 @@ function DatabaseError(statement = "", message) {
   this.message = message;
 }
 
-function Parser(statement) {
+function Parser() {
   let commands = new Map([
     ["create", /(\w+) table (\w+) \((.+)\)/],
     ["insert", /(\w+) into (\w+) \((.+)\) values \((.+)\)/],
@@ -11,7 +11,7 @@ function Parser(statement) {
     ["delete", /(\w+) from (\w+)(?: where (\w+) = (.+))?/],
   ]);
 
-  const parse = function (statement) {
+  this.parse = function (statement) {
     for (let [name, regexp] of commands) {
       const operation = statement.match(regexp);
       if (operation) {
@@ -23,17 +23,13 @@ function Parser(statement) {
       }
     }
   };
-
-  return parse(statement);
 }
 
 const database = {
   tables: {
     data: [],
   },
-  parser: function (statement) {
-    return new Parser(statement);
-  },
+  parser: new Parser(),
   create: function (parsedStatement) {
     let [_, tableName, columns] = parsedStatement;
 
@@ -97,7 +93,7 @@ const database = {
       return newResult;
     });
 
-    table.data.push(result);
+    return result;
   },
   delete: function (parsedStatement) {
     let [_, tableName, columnWhere, columnValue] = parsedStatement;
@@ -113,7 +109,7 @@ const database = {
     }
   },
   execute: function (statement) {
-    const { command, parsedStatement } = this.parser(statement);
+    const { command, parsedStatement } = this.parser.parse(statement);
     if (command) {
       return this[command](parsedStatement);
     } else {
@@ -138,8 +134,7 @@ try {
 
   database.execute("delete from author where id = 2");
 
-  database.execute("select name, age from author");
-  console.log(JSON.stringify(database, undefined, "  "));
+  console.log(JSON.stringify(database.execute("select name, age from author"), undefined, "  "));
 } catch (e) {
   console.log("Ocorreu um erro, verifique se o comando informado está correto");
 }
