@@ -1,5 +1,5 @@
-import Parser from "./parser.js";
-import DatabaseError from "./databaseError.js";
+import Parser from './parser.js';
+import DatabaseError from './databaseError.js';
 
 export default class Database {
   constructor() {
@@ -24,10 +24,10 @@ export default class Database {
       });
     }
 
-    return (this.tables[tableName] = {
+    this.tables[tableName] = {
       columns: parsedColumns,
       data: [],
-    });
+    };
   }
 
   insert(parsedStatement) {
@@ -45,8 +45,6 @@ export default class Database {
     }
 
     this.tables[tableName].data.push(row);
-
-    return row;
   }
 
   select(parsedStatement) {
@@ -94,16 +92,11 @@ export default class Database {
   }
 
   execute(statement) {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        const { command, parsedStatement } = this.parser.parse(statement);
-
-        if (command) {
-          resolve(this[command](parsedStatement));
-        } else {
-          reject(new DatabaseError(statement, `Syntax error: '${statement}'`));
-        }
-      }, 1000);
-    });
+    const { command, parsedStatement } = this.parser.parse(statement);
+    if (command) {
+      return this[command](parsedStatement);
+    } else {
+      throw new DatabaseError(statement, `Syntax error: '${statement}'`);
+    }
   }
 }
